@@ -1,0 +1,162 @@
+# Lighthouse Development Environment
+# Run: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Rust Backend (Core Monitoring Engine)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lighthouse-backend
+    ports:
+      - "8080:8080"  # API
+      - "9090:9090"  # Prometheus metrics
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://lighthouse:lighthouse@timescaledb:5432/lighthouse
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=lighthouse=debug,tower_http=debug,sqlx=debug
+    env_file:
+      - .env
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/Cargo.toml:/app/Cargo.toml:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - lighthouse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Python Workers (Canary Flows)
+  # ============================================
+  worker:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    container_name: lighthouse-worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://lighthouse:lighthouse@timescaledb:5432/lighthouse
+      - PLAYWRIGHT_HEADLESS=true
+    env_file:
+      - .env
+    volumes:
+      - ./workers:/app:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - lighthouse
+    restart: unless-stopped
+    command: celery -A canary.worker worker --loglevel=info
+
+  # ============================================
+  # TimescaleDB (PostgreSQL + Time-Series)
+  # ============================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: lighthouse-timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=lighthouse
+      - POSTGRES_PASSWORD=lighthouse
+      - POSTGRES_DB=lighthouse
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - lighthouse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lighthouse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"        # Optimize for time-series
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "max_connections=100"
+
+  # ============================================
+  # Redis (Cache & Task Queue)
+  # ============================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: lighthouse-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - lighthouse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============================================
+  # Frontend (Optional - Phase 2)
+  # ============================================
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: lighthouse-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:8080
+  #   volumes:
+  #     - ./frontend/src:/app/src:ro
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - lighthouse
+
+  # ============================================
+  # Flower (Celery Monitoring - Optional)
+  # ============================================
+  # flower:
+  #   image: mher/flower:2.0
+  #   container_name: lighthouse-flower
+  #   ports:
+  #     - "5555:5555"
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - lighthouse
+
+networks:
+  lighthouse:
+    driver: bridge
+
+volumes:
+  timescaledb-data:
+  redis-data:

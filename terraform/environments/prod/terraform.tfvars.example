@@ -1,0 +1,47 @@
+# ============================================================================
+# Production Environment Configuration
+# ============================================================================
+# Copy this file to terraform.tfvars and customize for your environment
+
+aws_region = "us-east-1"
+
+# Network (assumes pre-existing VPC setup)
+vpc_name                     = "lighthouse-prod-vpc"
+private_subnet_name          = "lighthouse-prod-private-subnet"
+backend_security_group_name  = "lighthouse-prod-backend-sg"
+
+# Database sizing (Year 1-2 configuration)
+instance_type  = "t4g.small"  # Upgrade to t4g.medium in Year 3
+volume_size_gb = 100          # Increase to 500 GB in Year 3
+
+# Secrets
+db_password_secret_id = "lighthouse/prod/db/password"  # Create in AWS Secrets Manager
+
+# Backups
+backup_s3_bucket = "lighthouse-backups-prod"  # Must pre-create bucket
+
+# Monitoring
+alerts_sns_topic_name = "lighthouse-prod-alerts"  # Must pre-create SNS topic
+
+# DNS
+domain_name = "karmacadabra.ultravioletadao.xyz"
+
+# SSH access (restrict to bastion or VPN)
+ssh_key_name            = "lighthouse-prod"
+ssh_allowed_cidr_blocks = ["10.0.0.0/16"]  # Internal VPC only
+
+# ============================================================================
+# Pre-Deployment Checklist
+# ============================================================================
+#
+# [ ] Create VPC with public and private subnets
+# [ ] Create backend security group
+# [ ] Create SNS topic for alerts: lighthouse-prod-alerts
+# [ ] Create S3 bucket: lighthouse-backups-prod (enable versioning)
+# [ ] Create Secrets Manager secret: lighthouse/prod/db/password (min 16 chars)
+# [ ] Create EC2 key pair: lighthouse-prod
+# [ ] Create S3 backend bucket: lighthouse-terraform-state
+# [ ] Create DynamoDB table: lighthouse-terraform-locks
+# [ ] Subscribe to SNS alerts (email/PagerDuty)
+#
+# Estimated cost: $22-24/month (t4g.small + 100GB + backups)

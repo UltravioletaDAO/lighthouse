@@ -1,0 +1,9 @@
+# ============================================================================
+# Development Environment Configuration
+# ============================================================================
+# Copy this file to terraform.tfvars and customize for your environment
+
+aws_region   = "us-east-1"
+ssh_key_name = "lighthouse-dev"  # Must exist in AWS EC2 Key Pairs
+
+# Cost: ~$4/month (spot instance + 20GB storage)

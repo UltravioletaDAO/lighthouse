@@ -1,0 +1,82 @@
+[package]
+name = "lighthouse"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ultravioleta DAO <dao@ultravioleta.xyz>"]
+description = "Universal trustless monitoring platform for Web3"
+license = "Apache-2.0"
+repository = "https://github.com/ultravioletadao/lighthouse"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+tokio = { version = "1", features = ["full"] }
+hyper = { version = "1", features = ["full"] }
+
+# Async runtime
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client (for monitoring)
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# WebSocket (Phase 2)
+tokio-tungstenite = "0.21"
+
+# MongoDB
+mongodb = "2.8"
+bson = "2.9"
+
+# Redis
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Blockchain
+alloy = { version = "0.1", features = ["full"] }
+# Alternative if alloy not stable: ethers = { version = "2", features = ["abigen"] }
+
+# Environment variables
+dotenvy = "0.15"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Base64
+base64 = "0.21"
+
+# Crypto (for signature verification)
+k256 = { version = "0.13", features = ["ecdsa"] }
+sha3 = "0.10"
+
+# Configuration
+config = "0.13"
+
+# Metrics (Prometheus)
+prometheus = "0.13"
+
+# Scheduler (background tasks)
+tokio-cron-scheduler = "0.9"
+
+[dev-dependencies]
+mockito = "1"
+wiremock = "0.6"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
