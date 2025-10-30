@@ -2,7 +2,7 @@
 
 **Status:** Design Phase
 **Version:** 2.0.0
-**Location:** `z:\ultravioleta\dao\karmacadabra\lighthouse\`
+**Repository:** https://github.com/UltravioletaDAO/lighthouse
 **Domains:** `lighthouse.ultravioletadao.xyz` (EN) | `faro.ultravioletadao.xyz` (ES)
 
 ---
